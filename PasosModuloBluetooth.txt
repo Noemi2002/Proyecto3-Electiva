@@ -1,0 +1,32 @@
+Pasos para poder utilizar el módulo Bluetooth:
+
+1. Compilar y subir el programa desde Arduino IDE
+2. Conectar la computadora al módulo:
+	
+	Linux:
+	
+	sudo rfcomm connect 0 98:DA:60:02:3D:A3 1
+	Se debe dejar esa terminal abierta mientras se utiliza el módulo.
+	
+	Windows:
+
+	Ir a Configuración → Bluetooth y dispositivos.
+	Activar Bluetooth.
+	Seleccionar Agregar dispositivo.
+	Elegir Bluetooth.
+	Seleccionar el módulo =palito.
+	Ingresar la contraseña 1234.
+	Una vez conectado/emparejado, buscar el puerto COM asignado al módulo.
+
+	Para ver el puerto COM:
+	Abrir Administrador de dispositivos.
+	Buscar la sección Puertos (COM y LPT).
+	Identificar el puerto asociado al módulo Bluetooth.
+	También se puede revisar en Configuración avanzada de Bluetooth → Puertos COM.
+
+	Se debe usar el puerto COM saliente, por ejemplo COM5, COM6, etc.
+		
+Con solo haber emparejado el dispositivo, ya el programa conectado a la interfaz y el programa en python deberían funcionar bien, se debe asegurar que las conexiones de los pines correspondan con el diagrama.
+
+Comando para ejecutar el programa en Python (En linux, ajustar la dirección según corresponda):
+KIVY_GL_BACKEND=gl /home/noemi/Documentos/Proyecto3-Modelación/.venv/bin/python3 /home/noemi/Documentos/Proyecto3-Modelación/Interfaz/main.py
