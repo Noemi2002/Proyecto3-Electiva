@@ -112,12 +112,16 @@ unsigned long lastLDRsend = 0;
 const unsigned long LDR_INTERVAL = 1000;   // ms
 
 // Detección de palmadas (KY-037)
-int soundThreshold = 500;                  // ajustar según ambiente/sensor
+int soundThreshold = 400;                  // ajustar según ambiente/sensor
 unsigned long lastSoundTime = 0;
 const unsigned long SOUND_DEBOUNCE = 300;  // ms entre detecciones individuales
 unsigned long clapWindowStart = 0;
 const unsigned long CLAP_WINDOW = 600;     // ventana para agrupar 1 o 2 palmadas
 int clapCount = 0;
+
+// Debug de sensor
+unsigned long lastSensorDebug = 0;
+const unsigned long SENSOR_DEBUG_INTERVAL = 500;  // ms entre prints de debug
 
 // Animación FADE (crossfade continuo entre dos colores)
 bool fadeActive = false;
@@ -356,8 +360,22 @@ void checkSound() {
   int level = analogRead(PIN_SOUND);
   unsigned long now = millis();
 
+  // Debug: mostrar nivel del sensor cada 500ms
+  if (now - lastSensorDebug >= SENSOR_DEBUG_INTERVAL) {
+    lastSensorDebug = now;
+    Serial.print("[SENSOR] Nivel KY-037: ");
+    Serial.print(level);
+    Serial.print(" (umbral: ");
+    Serial.print(soundThreshold);
+    Serial.println(")");
+  }
+
   if (level > soundThreshold && (now - lastSoundTime) > SOUND_DEBOUNCE) {
     lastSoundTime = now;
+    Serial.print("[CLAP DETECTADO] Nivel: ");
+    Serial.print(level);
+    Serial.print(" > umbral: ");
+    Serial.println(soundThreshold);
     if (clapCount == 0) {
       clapWindowStart = now;
     }

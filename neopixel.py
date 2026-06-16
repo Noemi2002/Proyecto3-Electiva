@@ -264,7 +264,7 @@ class SoundDetectionHandler:
     Incluye cooldown para evitar detecciones dobles accidentales.
     """
 
-    COOLDOWN = 1.2   # segundos mínimos entre acciones
+    COOLDOWN = 1.5   # segundos mínimos entre acciones
 
     def __init__(self, session: PomodoroSession):
         self.session = session
@@ -274,25 +274,28 @@ class SoundDetectionHandler:
     def handle(self, raw: str):
         if not raw.startswith("CLAP:"):
             return
-        now = time.time()
-        if now - self._last_action_time < self.COOLDOWN:
-            return   # ignorar si llegó demasiado rápido (rebote)
-        self._last_action_time = now
+
         try:
             count = int(raw.split(":")[1])
         except (IndexError, ValueError):
             return
 
-        if count == 1:
-            self.session.toggle_pause()
-            action = "pause" if self.session.state == "PAUSED" else "resume"
-            if self.on_clap:
-                self.on_clap(1, action)
-        elif count == 2:
-            self.session.extend(300)
-            if self.on_clap:
-                self.on_clap(2, "extend")
+        # Por ahora ignoramos CLAP:2 porque el sensor lo está generando falso constantemente
+        if count != 1:
+            return
 
+        now = time.time()
+        if now - self._last_action_time < self.COOLDOWN:
+            return
+
+        self._last_action_time = now
+
+        print("[SoundDetection] Palmada detectada: toggle pause/reanudar")
+        self.session.toggle_pause()
+
+        action = "pause" if self.session.state == "PAUSED" else "resume"
+        if self.on_clap:
+            self.on_clap(1, action)
 
 # ─────────────────────────────────────────────
 # CAPA DE PRESENTACIÓN (Kivy UI)
