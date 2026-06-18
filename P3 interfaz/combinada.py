@@ -272,7 +272,7 @@ class SoundDetectionHandler:
     actualmente solo se ejecuta acción con CLAP:1 y se ignora CLAP:2.
     """
 
-    COOLDOWN = 1.5   # segundos mínimos entre acciones
+    COOLDOWN = 1   # segundos mínimos entre acciones
 
     def __init__(self, session: PomodoroSession):
         self.session = session
