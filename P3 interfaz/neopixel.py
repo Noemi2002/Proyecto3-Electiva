@@ -23,6 +23,10 @@ from kivy.uix.colorpicker import ColorPicker
 from kivy.uix.scrollview import ScrollView
 from kivy.clock import Clock
 from kivy.graphics import Color, RoundedRectangle, Ellipse
+from kivy.uix.screenmanager import ScreenManager, Screen
+from kivy.uix.floatlayout import FloatLayout
+from kivy.uix.image import Image
+from kivy.graphics import Color, Rectangle
 from kivy.core.window import Window
 
 Window.size = (360, 640)
@@ -302,14 +306,19 @@ class SoundDetectionHandler:
 # ─────────────────────────────────────────────
 
 # Colores del tema oscuro
-BG_DARK    = (0.07, 0.07, 0.12, 1)
-BG_CARD    = (0.10, 0.10, 0.18, 1)
-BG_CARD2   = (0.13, 0.13, 0.22, 1)
-C_WORK     = (1.0,  0.42, 0.21, 1)   # naranja
-C_REST     = (0.0,  0.78, 0.47, 1)   # verde
-C_PAUSE    = (0.27, 0.53, 1.0,  1)   # azul
-C_TEXT     = (0.95, 0.95, 0.95, 1)
-C_MUTED    = (0.50, 0.50, 0.60, 1)
+BG_DARK    = (0.99, 0.94, 0.86, 1)   # crema principal
+
+BG_CARD    = (1.00, 0.84, 0.65, 1)   # durazno
+BG_CARD2   = (0.82, 0.69, 0.54, 1)   # beige oscuro para botones
+
+C_WORK     = (0.86, 0.29, 0.20, 1)   # rojo tomate
+C_REST     = (0.95, 0.64, 0.16, 1)   # naranja cálido
+C_PAUSE    = (0.65, 0.45, 0.20, 1)   # marrón ámbar
+
+C_TEXT     = (0.18, 0.14, 0.10, 1)   # café oscuro
+C_MUTED    = (0.50, 0.42, 0.35, 1)   # café grisáceo
+
+C_PRIMARY = (0.88, 0.31, 0.20, 1)   # tomate
 
 # Brillo por defecto del NeoPixel (0-255), se sincroniza con el Arduino
 DEFAULT_NEOPIXEL_BRIGHTNESS = 150
@@ -324,6 +333,63 @@ def make_label(text, size=14, color=C_TEXT, bold=False, halign="left"):
                 bold=bold, halign=halign, valign="middle")
     lbl.bind(size=lbl.setter("text_size"))
     return lbl
+
+class InicioScreen(Screen):
+
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+
+        layout = FloatLayout()
+
+        with layout.canvas.before:
+            Color(1, 0.75, 0, 1)
+            self.rect = Rectangle(
+                size=layout.size,
+                pos=layout.pos
+            )
+
+        layout.bind(size=self.actualizar_fondo)
+        layout.bind(pos=self.actualizar_fondo)
+
+        gif_tomates = Image(
+            source="Tomates flotando.gif",
+            anim_delay=0.05,
+            size_hint=(1,1),
+            allow_stretch=True,
+            keep_ratio=False
+        )
+
+        logo = Image(
+            source="logo.png",
+            size_hint=(0.8,0.5),
+            pos_hint={"center_x":0.5,"center_y":0.55}
+        )
+        boton = Button(
+            text="INICIA TU MODO",
+            size_hint=(0.7,0.08),
+            pos_hint={"center_x":0.5,"center_y":0.45},
+            background_normal="",
+            background_color=(1, 0.3, 0.2, 1)
+        )
+
+        boton.bind(on_press=self.ir_a_app)
+
+        layout.add_widget(gif_tomates)
+        layout.add_widget(logo)
+        layout.add_widget(boton)
+
+        self.add_widget(layout)
+
+    def actualizar_fondo(self, instance, value):
+        self.rect.size = instance.size
+        self.rect.pos = instance.pos
+
+    def ir_a_app(self, instance):
+        self.manager.current = "pomodoro"
+
+        
+class PomodoroScreen(Screen):
+    pass
 
 
 class PomodoroApp(App):
@@ -355,8 +421,8 @@ class PomodoroApp(App):
                 rest_fade_to=(230, 230, 250),       # se desvanece a lavanda #E6E6FA
                 rest_fade_period_ms=8000,           # desvanecimiento lento
             ),
-            "Custom":      StudyMode(
-                "Custom", 25*60, 5*60,
+            "Método Personalizado":      StudyMode(
+                "Método Personalizado", 25*60, 5*60,
                 led_color=(255, 200, 0),
                 description="Configurable desde la app",
                 rest_color=(0, 180, 80),
@@ -385,26 +451,38 @@ class PomodoroApp(App):
         self.session.on_resume = self._on_resume
 
         # ── Layout raíz ──
-        root = BoxLayout(orientation="vertical")
-        with root.canvas.before:
+        pomodoro_root = BoxLayout(orientation="vertical")
+        with pomodoro_root.canvas.before:
             Color(*BG_DARK)
-            self._bg_rect = RoundedRectangle(size=root.size, pos=root.pos)
-        root.bind(size=self._update_bg, pos=self._update_bg)
+            self._bg_rect = RoundedRectangle(size=pomodoro_root.size, pos=pomodoro_root.pos)
+        pomodoro_root.bind(size=self._update_bg, pos=self._update_bg)
 
-        root.add_widget(self._build_header())
-        root.add_widget(self._build_timer_section())
-        root.add_widget(self._build_mode_tabs())
-        root.add_widget(self._build_controls())
-        root.add_widget(self._build_status_section())
+        pomodoro_root.add_widget(self._build_header())
+        pomodoro_root.add_widget(self._build_timer_section())
+        pomodoro_root.add_widget(self._build_mode_tabs())
+        pomodoro_root.add_widget(self._build_controls())
+        pomodoro_root.add_widget(self._build_status_section())
 
         Clock.schedule_interval(self._clock_tick, 1)
-        return root
+        Clock.schedule_interval(self._clock_tick, 1)
+
+        sm = ScreenManager()
+
+        inicio = InicioScreen(name="inicio")
+
+        pomodoro_screen = PomodoroScreen(name="pomodoro")
+        pomodoro_screen.add_widget(pomodoro_root)
+
+        sm.add_widget(inicio)
+        sm.add_widget(pomodoro_screen)
+
+        return sm
 
     # ─── Secciones UI ───────────────────────────────────────
 
     def _build_header(self):
         row = BoxLayout(size_hint_y=None, height=48, padding=(16, 8))
-        row.add_widget(make_label("💡 Lámpara Pomodoro", size=16, bold=True))
+        row.add_widget(make_label("Lámpara Pomodoro", size=16, bold=True))
         self.bt_label = make_label("Sin conexión", size=12,
                                    color=C_MUTED, halign="right")
         row.add_widget(self.bt_label)
@@ -423,7 +501,7 @@ class PomodoroApp(App):
         box.bind(size=lambda w, s: setattr(rect, "size", s))
         box.bind(pos=lambda w, p: setattr(rect, "pos", p))
 
-        self.state_label = make_label("● TRABAJANDO", size=12,
+        self.state_label = make_label("TRABAJANDO", size=12,
                                       color=C_WORK, halign="center", bold=True)
         box.add_widget(self.state_label)
 
@@ -462,7 +540,7 @@ class PomodoroApp(App):
                         padding=(16, 4), spacing=8)
 
         # ── Fila 0: botón Start ──
-        self.start_btn = Button(text="▶  Iniciar Pomodoro",
+        self.start_btn = Button(text="Iniciar Pomodoro",
                                 background_color=C_REST, font_size=15,
                                 size_hint_y=None, height=48)
         self.start_btn.bind(on_press=lambda _: self._start_pomodoro())
@@ -470,11 +548,11 @@ class PomodoroApp(App):
 
         # ── Fila 1: Pausar / Saltar ──
         row1 = BoxLayout(spacing=10, size_hint_y=None, height=46)
-        self.pause_btn = Button(text="⏸  Pausar",
+        self.pause_btn = Button(text="Pausar",
                                 background_color=BG_CARD2, font_size=14,
                                 disabled=True)
         self.pause_btn.bind(on_press=lambda _: self._toggle_pause())
-        skip_btn = Button(text="⏭  Saltar",
+        skip_btn = Button(text="Saltar",
                           background_color=BG_CARD2, font_size=14)
         skip_btn.bind(on_press=lambda _: self._skip())
         row1.add_widget(self.pause_btn)
@@ -485,9 +563,9 @@ class PomodoroApp(App):
         ext_btn = Button(text="+5 min", background_color=BG_CARD2,
                          font_size=12, color=C_TEXT)
         ext_btn.bind(on_press=lambda _: self._extend())
-        voice_btn = Button(text="🎤 Voz (palmada)", background_color=BG_CARD2,
+        voice_btn = Button(text="Voz (palmada)", background_color=BG_CARD2,
                            font_size=12, color=C_MUTED)
-        custom_btn = Button(text="⚙ Config", background_color=BG_CARD2,
+        custom_btn = Button(text="Configuración", background_color=BG_CARD2,
                             font_size=12, color=C_MUTED)
         custom_btn.bind(on_press=lambda _: self._open_custom_popup())
         row2.add_widget(ext_btn)
@@ -505,11 +583,11 @@ class PomodoroApp(App):
         self.led_status = make_label("NeoPixel: —", size=12, color=C_TEXT)
         self.sessions_label = make_label("Sesiones completadas: 0",
                                          size=12, color=C_TEXT)
-        self.sensor_label = make_label("🎤 KY-037: escuchando palmadas...",
+        self.sensor_label = make_label("KY-037: escuchando palmadas...",
                                        size=12, color=C_MUTED)
-        self.buzzer_label = make_label("🔔 Buzzer: en espera",
+        self.buzzer_label = make_label("Buzzer: en espera",
                                        size=12, color=C_MUTED)
-        self.ldr_label = make_label("☀ Fotocelda: —",
+        self.ldr_label = make_label("Fotocelda:",
                                     size=12, color=C_MUTED)
         box.add_widget(self.led_status)
         box.add_widget(self.sessions_label)
@@ -523,7 +601,7 @@ class PomodoroApp(App):
     def _start_pomodoro(self):
         if not self._started:
             self._started = True
-            self.start_btn.text = "● En curso"
+            self.start_btn.text = "En curso"
             self.start_btn.background_color = C_MUTED
             self.start_btn.disabled = True
             self.pause_btn.disabled = False
@@ -544,9 +622,18 @@ class PomodoroApp(App):
     def _select_mode(self, name: str):
         mode = self.modes[name]
         self.session.set_mode(mode)
+
         for n, btn in self._mode_buttons.items():
-            btn.color = C_TEXT if n == name else C_MUTED
-            btn.state = "down" if n == name else "normal"
+
+            if n == name:
+                btn.state = "down"
+                btn.background_color = C_WORK
+                btn.color = (1,1,1,1)
+
+            else:
+                btn.state = "normal"
+                btn.background_color = BG_CARD2
+                btn.color = C_TEXT
 
     # Traduce el nombre que envía el Arduino (sin tildes, en mayúsculas)
     # al nombre real usado en self.modes
@@ -554,7 +641,7 @@ class PomodoroApp(App):
         "CLASICO": "Clásico",
         "INVERTIDO": "Invertido",
         "FLOWMODORO": "Flowmodoro",
-        "CUSTOM": "Custom",
+        "MÉTODO PERSONALIZADO": "Método Personalizado",
     }
 
     def _on_physical_mode_button(self, button_name: str):
@@ -567,7 +654,7 @@ class PomodoroApp(App):
             return
 
         self._select_mode(mode_name)
-        self.sensor_label.text = f"🔘 Modo seleccionado: {mode_name}"
+        self.sensor_label.text = f"Modo seleccionado: {mode_name}"
         self.sensor_label.color = C_REST
 
     # ─── Callbacks de sesión ────────────────────────────────
@@ -585,15 +672,15 @@ class PomodoroApp(App):
     def _on_state_change(self, state: str):
         def update(_):
             colors = {"WORK": C_WORK, "REST": C_REST, "PAUSED": C_PAUSE}
-            labels = {"WORK": "● TRABAJANDO", "REST": "● DESCANSANDO",
-                      "PAUSED": "⏸ PAUSADO"}
-            btn_texts = {"WORK": "⏸  Pausar", "REST": "⏸  Pausar",
-                         "PAUSED": "▶  Reanudar"}
+            labels = {"WORK": "TRABAJANDO", "REST": "DESCANSANDO",
+                      "PAUSED": "PAUSADO"}
+            btn_texts = {"WORK": "Pausar", "REST": "Pausar",
+                         "PAUSED": "Reanudar"}
 
             color = colors.get(state, C_MUTED)
             self.state_label.text = labels.get(state, state)
             self.state_label.color = color
-            self.pause_btn.text = btn_texts.get(state, "⏸  Pausar")
+            self.pause_btn.text = btn_texts.get(state, "Pausar")
             self.pause_btn.background_color = color
 
             cmd = self.session.mode.get_led_command(state)
@@ -632,7 +719,7 @@ class PomodoroApp(App):
         def update(_):
             self.sound_handler.handle(data)
             if data == "PONG":
-                self.sensor_label.text = "✓ Conexión verificada (PONG recibido)"
+                self.sensor_label.text = "Conexión verificada (PONG recibido)"
                 self.sensor_label.color = C_REST
             elif data.startswith("MODE:"):
                 button_name = data.split(":", 1)[1]
@@ -646,23 +733,23 @@ class PomodoroApp(App):
             elif data.startswith("CLAP:"):
                 pass  # feedback lo maneja _on_clap
             elif data.startswith("LED_OK"):
-                self.sensor_label.text = "✓ NeoPixel actualizado correctamente"
+                self.sensor_label.text = "NeoPixel actualizado correctamente"
                 self.sensor_label.color = C_REST
             elif data.startswith("BRIGHT_OK"):
-                self.sensor_label.text = "✓ Brillo de NeoPixel actualizado"
+                self.sensor_label.text = "Brillo de NeoPixel actualizado"
                 self.sensor_label.color = C_REST
             elif data.startswith("LDR:"):
                 try:
                     lux = int(data.split(":")[1])
                     pct = round((lux / 1023) * 100)
                     if pct < 20:
-                        desc = "🌑 Muy oscuro"
+                        desc = "Muy oscuro"
                         col  = (0.4, 0.4, 0.5, 1)
                     elif pct < 50:
-                        desc = "🌥 Poca luz"
+                        desc = "Poca luz"
                         col  = C_MUTED
                     else:
-                        desc = "☀ Buena luz"
+                        desc = "Buena luz"
                         col  = C_REST
                     self.ldr_label.text  = f"{desc} ({pct}%)"
                     self.ldr_label.color = col
@@ -672,22 +759,22 @@ class PomodoroApp(App):
                 self.sensor_label.text = f"⚠ {data}"
                 self.sensor_label.color = (1, 0.3, 0.3, 1)
             elif data == "BUZZ_DONE":
-                self.buzzer_label.text = "🔔 Buzzer: sonido completado"
+                self.buzzer_label.text = "Buzzer: sonido completado"
                 self.buzzer_label.color = C_WORK
             elif data == "BUZZ_START_DONE":
-                self.buzzer_label.text = "🔔 Buzzer: inicio de sesión"
+                self.buzzer_label.text = "Buzzer: inicio de sesión"
                 self.buzzer_label.color = C_REST
             elif data == "BUZZ_WORK_DONE":
-                self.buzzer_label.text = "🔔 Buzzer: fin de trabajo"
+                self.buzzer_label.text = "Buzzer: fin de trabajo"
                 self.buzzer_label.color = C_WORK
             elif data == "BUZZ_REST_DONE":
-                self.buzzer_label.text = "🔔 Buzzer: fin de descanso"
+                self.buzzer_label.text = "Buzzer: fin de descanso"
                 self.buzzer_label.color = C_REST
             elif data == "BUZZ_PAUSE_DONE":
-                self.buzzer_label.text = "🔔 Buzzer: pausa"
+                self.buzzer_label.text = "Buzzer: pausa"
                 self.buzzer_label.color = C_PAUSE
             elif data == "BUZZ_RESUME_DONE":
-                self.buzzer_label.text = "🔔 Buzzer: reanudado"
+                self.buzzer_label.text = "Buzzer: reanudado"
                 self.buzzer_label.color = C_REST
             else:
                 self.sensor_label.text = f"Arduino → {data}"
@@ -697,11 +784,11 @@ class PomodoroApp(App):
     def _on_clap(self, count: int, action: str):
         """Feedback visual en la UI cuando se detecta una palmada."""
         messages = {
-            (1, "pause"):  ("👏 1 aplauso → ⏸ Pausado",   C_PAUSE),
-            (1, "resume"): ("👏 1 aplauso → ▶ Reanudado",  C_REST),
-            (2, "extend"): ("👏👏 2 aplausos → +5 min",     C_WORK),
+            (1, "pause"):  ("1 aplauso → Pausado",   C_PAUSE),
+            (1, "resume"): ("1 aplauso → Reanudado",  C_REST),
+            (2, "extend"): ("2 aplausos → +5 min",     C_WORK),
         }
-        text, color = messages.get((count, action), (f"👏 CLAP:{count}", C_MUTED))
+        text, color = messages.get((count, action), (f"CLAP:{count}", C_MUTED))
 
         def update(_):
             self.sensor_label.text = text
@@ -745,7 +832,7 @@ class PomodoroApp(App):
                 # Apagar el NeoPixel hasta presionar "Iniciar Pomodoro"
                 self.bt.send("LED:0,0,0\n")
                 self.sensor_label.text = "PING enviado — esperando PONG..."
-                self.buzzer_label.text = "🔔 Buzzer: señal de inicio enviada"
+                self.buzzer_label.text = "Buzzer: señal de inicio enviada"
                 self.buzzer_label.color = C_REST
             else:
                 self.bt_label.text = "✗ Error al conectar"
@@ -793,7 +880,7 @@ class PomodoroApp(App):
         bright_row.add_widget(self._bright_val)
 
         # ── Color de la luz (modo trabajo) — círculo cromático ──
-        current = self.modes["Custom"].led_color
+        current = self.modes["Método Personalizado"].led_color
         self._color_picker = ColorPicker(
             color=[current[0] / 255, current[1] / 255, current[2] / 255, 1],
             size_hint_y=None, height=320)
@@ -808,12 +895,12 @@ class PomodoroApp(App):
             cr, cg, cb, _ = self._color_picker.color
             work_color = (int(cr * 255), int(cg * 255), int(cb * 255))
 
-            self.modes["Custom"] = StudyMode(
-                "Custom", w, rest_secs, work_color,
-                "Modo personalizado",
+            self.modes["Método Personalizado"] = StudyMode(
+                "Método Personalizado", w, rest_secs, work_color,
+                "Método Personalizado",
                 rest_color=(0, 180, 80),
             )
-            self._select_mode("Custom")
+            self._select_mode("Método Personalizado")
 
             # Aplicar brillo de NeoPixel y enviarlo al Arduino
             self.neopixel_brightness = int(self._bright_slider.value)
@@ -823,7 +910,7 @@ class PomodoroApp(App):
 
         save_btn.bind(on_press=save)
 
-        content.add_widget(make_label("Configurar modo personalizado",
+        content.add_widget(make_label("Configurar método personalizado",
                                       size=14, bold=True))
         content.add_widget(work_row)
         content.add_widget(rest_row)
@@ -834,7 +921,7 @@ class PomodoroApp(App):
         content.add_widget(self._color_picker)
         content.add_widget(save_btn)
 
-        popup = Popup(title="Modo personalizado", content=scroll,
+        popup = Popup(title="Método Personalizado", content=scroll,
                       size_hint=(0.95, 0.9))
         popup.open()
 
