@@ -1,6 +1,7 @@
-# Proyecto 3: Lámpara Pomodoro
+# Proyecto 3: Lámpara Pomora
 
 **Curso:** Modelación Hardware/Software con Orientación a Objetos
+
 **Profesor:** Marco Hernández Vásquez
 
 ## Integrantes
